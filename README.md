@@ -1,45 +1,95 @@
-# SM4-CKKS Transciphering
+# SM4-CKKS Transciphering with Lazy-mod2 Recovery
 
-This repository contains the artifact for the SM4-CKKS transciphering
-experiments. The main implementation is `SM4-CKKS`, which evaluates SM4-CTR
-under CKKS with Lazy-mod2 recovery. The other three implementations are kept as
-isolated comparison baselines for the paper.
+This is the code artifact for our SM4-CKKS transciphering experiments. The
+main implementation is named ***SM4-CKKS Transciphering: Lazy-mod2*** and is
+located in [`./SM4-CKKS/ckks_sm4_lazymod2`](./SM4-CKKS/ckks_sm4_lazymod2).
 
-## Repository Layout
+Our implementation is based on the open-source FHE library
+[Lattigo v6.0](https://github.com/tuneinsight/lattigo). This repository keeps
+isolated local copies of the modified Lattigo dependency for each experiment
+group, so that the comparison implementations can be compiled independently.
 
-| Directory | Role in the paper | Purpose |
-| --- | --- | --- |
-| `SM4-BLEACH/ckks_sm4_xboot_1` | SM4-BLEACH comparison | Used to compare against the BLEACH-style baseline. |
-| `SM4-XBOOT/ckks_sm4_xboot` | SM4-XBOOT comparison | Used to compare against XBOOT-based XOR recovery. |
-| `SM4-LazySubByte/ckks_sm4_xboot_7` | SM4-LazySubByte comparison | Used to compare against the LazySubByte optimization. |
-| `SM4-CKKS/ckks_sm4_lazymod2` | Main experiment | Our SM4-CKKS implementation with Lazy-mod2 recovery. |
+## Golang installation and configuration
 
-The storage-oriented experiments associated with the main implementation are in
-`SM4-CKKS/ckks_sm4_store`.
+Downloading the Go binary distribution:
 
-Each top-level experiment directory includes an isolated local copy of the
-modified Lattigo dependency under `lattigo`. The Go modules use local `replace`
-directives so that each implementation can be compiled from its own directory
-without sharing dependency state with the other comparison variants.
+```PowerShell
+wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz
+```
 
-## Main Contribution
+Delete the existing Golang, and unzip the downloaded file into the environment:
 
-The main artifact is **SM4-CKKS Transciphering: Lazy-mod2**, implemented in
-`SM4-CKKS/ckks_sm4_lazymod2`.
+```PowerShell
+sudo rm -rf /usr/local/go        # delete old version if exists
+sudo tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz
+```
 
-- **LazyMod2 recovery:** defers XOR modular reduction to CKKS EvalMod and
-  recovers the LSB during bootstrapping.
-- **SM4 Lazy SubByte:** adapts LazySubByte-style bucketed evaluation to the SM4
-  S-box and diffusion layer.
-- **SM4 packing:** uses bit-sliced SIMD packing for SM4-CTR so XORs become slot
-  additions and parallel S-box evaluation is easier to organize.
+Editing the shell file and adding the following command (if not existing):
 
-## Experimental Parameters
+```PowerShell
+nano ~/.bashrc
+export PATH=$PATH:/usr/local/go/bin
+```
 
-The main `SM4-CKKS` experiment uses the Lazy-mod2 profile documented in
-`SM4-CKKS/ckks_sm4_lazymod2/README.md`.
+Saving and enabling:
 
-Default `logN=12` profile:
+```PowerShell
+source ~/.bashrc
+go version
+```
+
+## General information about the code structure
+
+### SM4-CKKS main transciphering scheme
+
+This part is located at
+
+```
+# Main SM4-CKKS Lazy-mod2 implementation
+./SM4-CKKS/ckks_sm4_lazymod2
+
+# LazyMod2 parameter profiles and boundary scans
+./SM4-CKKS/ckks_sm4_lazymod2/lazymod2params
+./SM4-CKKS/ckks_sm4_lazymod2/lazymod2scan
+
+# SM4 circuit, S-box, and CKKS transciphering code
+./SM4-CKKS/ckks_sm4_lazymod2/ckks_cipher
+
+# Storage experiments associated with the main implementation
+./SM4-CKKS/ckks_sm4_store
+```
+
+The main contribution includes the following functionalities.
+
+- LazyMod2 recovery for homomorphic XOR evaluation in CKKS bootstrapping.
+- LazySubByte-style bucketed evaluation adapted to the SM4 S-box and diffusion
+  layer.
+- Bit-sliced SIMD packing for SM4-CTR, where XOR operations are represented by
+  slot additions.
+
+### Comparison schemes
+
+The repository contains three isolated comparison implementations.
+
+```
+# SM4-BLEACH experiment for comparison with BLEACH
+./SM4-BLEACH/ckks_sm4_xboot_1
+
+# SM4-XBOOT experiment for comparison with XBOOT
+./SM4-XBOOT/ckks_sm4_xboot
+
+# SM4-LazySubByte experiment for comparison with LazySubByte
+./SM4-LazySubByte/ckks_sm4_xboot_7
+```
+
+Each experiment directory has its own `go.mod` and a local `../lattigo`
+dependency. This separation avoids mixing the dependency changes used by
+different baselines.
+
+## Experimental parameters
+
+The main `SM4-CKKS` experiment uses the default Lazy-mod2 profile with
+`logN=12`.
 
 | Parameter | Value |
 | --- | --- |
@@ -58,85 +108,65 @@ Default `logN=12` profile:
 | Secret distributions | `Xs.H=192`, ephemeral secret weight `32` |
 
 The `logN=12` profile is an experimental performance configuration for the
-paper artifact. It is not presented as a 128-bit security parameter set.
+artifact. It is not presented as a 128-bit security parameter set.
 
-## Go Installation and Configuration
+More detailed Lazy-mod2 profile information is given in
+[`./SM4-CKKS/ckks_sm4_lazymod2/README.md`](./SM4-CKKS/ckks_sm4_lazymod2/README.md).
 
-Install Go 1.24.4 or a compatible newer Go release. The following commands
-install the Go 1.24.4 binary distribution on Linux:
+## Compile and Run SM4-CKKS
 
-```bash
-wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz
-sudo rm -rf /usr/local/go
-sudo tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz
-```
+An example of running the `logN=12` SM4-CKKS Lazy-mod2 implementation is given
+below.
 
-Add Go to your shell path if it is not already configured:
-
-```bash
-nano ~/.bashrc
-```
-
-Add:
-
-```bash
-export PATH=$PATH:/usr/local/go/bin
-```
-
-Reload the shell configuration:
-
-```bash
-source ~/.bashrc
-go version
-```
-
-## Compile and Run
-
-Run each experiment from its own module directory.
-
-### SM4-CKKS, Lazy-mod2, `logN=12`
-
-```bash
-cd SM4-CKKS/ckks_sm4_lazymod2
+```PowerShell
+cd ./SM4-CKKS/ckks_sm4_lazymod2
 go run main.go
 ```
 
-Recommended benchmark command used for the main `logN=12` artifact:
+Recommended benchmark command:
 
-```bash
-cd SM4-CKKS/ckks_sm4_lazymod2
+```PowerShell
+cd ./SM4-CKKS/ckks_sm4_lazymod2
 go run . -threads 32 -boot-workers 16 -sbox-workers 4
 ```
 
-The included benchmark script runs several worker configurations and writes a
-report under `benchmarks/`:
+The benchmark script runs several worker configurations and writes reports
+under `./SM4-CKKS/ckks_sm4_lazymod2/benchmarks`.
 
-```bash
-cd SM4-CKKS/ckks_sm4_lazymod2
+```PowerShell
+cd ./SM4-CKKS/ckks_sm4_lazymod2
 ./scripts/bench_sm4_n12.sh
 ```
 
-### Comparison Experiments
+## Compile and Run comparison experiments
 
-```bash
-cd SM4-BLEACH/ckks_sm4_xboot_1
+Running the SM4-BLEACH comparison:
+
+```PowerShell
+cd ./SM4-BLEACH/ckks_sm4_xboot_1
 go run main.go
 ```
 
-```bash
-cd SM4-XBOOT/ckks_sm4_xboot
+Running the SM4-XBOOT comparison:
+
+```PowerShell
+cd ./SM4-XBOOT/ckks_sm4_xboot
 go run main.go
 ```
 
-```bash
-cd SM4-LazySubByte/ckks_sm4_xboot_7
+Running the SM4-LazySubByte comparison:
+
+```PowerShell
+cd ./SM4-LazySubByte/ckks_sm4_xboot_7
 go run main.go
 ```
 
-### Storage Experiments
+## Storage experiments
 
-```bash
-cd SM4-CKKS/ckks_sm4_store
+The storage experiments are kept with the main SM4-CKKS implementation.
+
+```PowerShell
+cd ./SM4-CKKS/ckks_sm4_store
 go run ./cmd/store_bench
 ```
 
@@ -144,12 +174,18 @@ Generated storage data and result files are intentionally ignored by Git. The
 repository keeps only placeholder `.gitignore` files in generated data and
 result directories.
 
-## Notes for Reproducibility
+## References
 
-- The four experiment directories are intentionally isolated because they
-  correspond to different comparison targets and may depend on different local
-  modifications of Lattigo.
-- Large toolchain archives, paper PDFs, IDE files, notebook checkpoints, and
-  unrelated experiments are excluded from this artifact repository.
-- For detailed Lazy-mod2 boundary scans and profile descriptions, see
-  `SM4-CKKS/ckks_sm4_lazymod2/README.md`.
+[1] Lattigo v6.0. Online: https://github.com/tuneinsight/lattigo.
+
+## Disclaimer
+
+This repository is organized for paper artifact evaluation and experimental
+comparison. The `logN=12` parameter set is used for performance experiments and
+is not claimed as a 128-bit security parameter set.
+
+## License
+
+Lattigo is licensed under the Apache 2.0 License. See
+[`LICENSE`](./SM4-CKKS/lattigo/LICENSE) for the local copy included with the
+main implementation.
