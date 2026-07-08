@@ -1,0 +1,3 @@
+benchmarks/
+results/*.csv
+!results/lazymod2_search_summary.csv

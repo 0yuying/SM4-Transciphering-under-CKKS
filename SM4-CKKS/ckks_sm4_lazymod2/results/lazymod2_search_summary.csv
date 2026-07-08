@@ -1,0 +1,7 @@
+record,profile,log_qp,q_count,log_default_scale,q0_log_scale,slot_log_scale,high_log_scale,stc_levels,circuit_levels,cts_levels,log_p,mode,terms,post_max_error,wrong_slots,full_sm4_total_ms,full_sm4_rounds_ms,round_trip,notes
+baseline,lazymod2-baseline,1556.000001,25,42,58,42,58,1:1:1,9,1:1:1:1,59:59:60:60:60,direct,124,1.92215716e-07,0,80515,67737,true,legacy baseline profile
+speed-default,lazymod2-default,1472.000000,23,42,58,42,58,1:1:1,7,1:1:1:1,59:59:60:60:60,all,124,1.64423330e-07,0,65781,54991,true,selected default; three full runs total_ms=65781/65825/66127
+boundary-critical,lazymod2-critical-boundary,730.999692,18,30,46,30,46,1,7,1,31,all,124,3.35303365e-01,0,262474,230562,false,boundary passes but full SM4 fails
+boundary-fail-low-p,custom-s30-h46-p1x30,729.999945,18,30,46,30,46,1,7,1,30,all,124,8.25026851e-01,14,,,false,first observed LSB failure below critical P
+boundary-fail-low-high,custom-s30-h45-p2x46,781.999637,18,30,45,30,45,1,7,1,46:46,all,124,1.00000088e+00,2406,,,false,highScale=45 fails
+boundary-fail-low-slot,custom-s29-h46-p2x47,786.000462,18,29,46,29,46,1,7,1,47:47,all,124,3.99805459e+00,3896,,,false,slotScale=29 fails
