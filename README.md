@@ -58,13 +58,13 @@ This part is located at
 ./SM4-CKKS/ckks_sm4_store
 ```
 
-The main contribution includes the following functionalities.
+The main contributions include the following aspects.
 
-- LazyMod2 recovery for homomorphic XOR evaluation in CKKS bootstrapping.
-- LazySubByte-style bucketed evaluation adapted to the SM4 S-box and diffusion
-  layer.
-- Bit-sliced SIMD packing for SM4-CTR, where XOR operations are represented by
-  slot additions.
+- **LazyMod2 Recovery Mechanism:** Integrates LSB extraction into the CKKS bootstrapping EvalMod stage through trigonometric approximation, reducing the overhead of chained XOR evaluation in SM4 transciphering.
+
+- **Optimized Lazy SubByte Evaluation:** Improves the Lazy SubByte technique for SM4 using a bucket accumulation strategy, reducing redundant Relin/Rescale operations and accelerating nonlinear substitution evaluation.
+
+- **SM4 Packing Structure:** Designs a bit-sliced SIMD packing strategy for SM4-CTR under CKKS, enabling efficient slot-wise XOR evaluation and parallel S-box computation with reduced data reordering overhead.
 
 ### Comparison schemes
 
@@ -72,7 +72,7 @@ The repository contains three isolated comparison implementations.
 
 ```
 # SM4-BLEACH experiment for comparison with BLEACH [2]
-./SM4-BLEACH/ckks_sm4_xboot
+./SM4-BLEACH/ckks_sm4_bleach
 
 # SM4-XBOOT experiment for comparison with XBOOT [3]
 ./SM4-XBOOT/ckks_sm4_xboot
@@ -87,12 +87,12 @@ different baselines.
 
 ## Compile and Run SM4-CKKS
 
-An example of running the `logN=16` SM4-CKKS Lazy-mod2 implementation is given
+An example of running the `logN=12` SM4-CKKS Lazy-mod2 implementation is given
 below.
 
 ```PowerShell
 cd ./SM4-CKKS/ckks_sm4_lazymod2
-go run main.go -logN 16
+go run main.go
 ```
 
 Recommended benchmark command:
@@ -115,7 +115,7 @@ cd ./SM4-CKKS/ckks_sm4_lazymod2
 Running the SM4-BLEACH comparison:
 
 ```PowerShell
-cd ./SM4-BLEACH/ckks_sm4_xboot
+cd ./SM4-BLEACH/ckks_sm4_bleach
 go run main.go
 ```
 
@@ -169,7 +169,7 @@ https://eprint.iacr.org/2025/1865.
 ## Disclaimer
 
 This repository is organized for paper artifact evaluation and experimental
-comparison. The `logN=16` parameter set is used for performance experiments and
+comparison. The `logN=12` parameter set is used for performance experiments and
 is not claimed as a 128-bit security parameter set.
 
 ## License
