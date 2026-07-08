@@ -25,21 +25,30 @@ var (
 )
 
 // ApproximateCos computes a polynomial approximation of degree "degree" in Chebyshev basis of the function
-// cos(2*pi*x/2^"scnum") in the range -"K" to "K"
+// cos(2*pi*(x-0.25)/2^"scnum") in the range -"K" to "K"
 // The nodes of the Chebyshev approximation are are located from -dev to +dev at each integer value between -K and -K
 func ApproximateCos(K, degree int, dev float64, scnum int) []*big.Float {
+	return approximate(K, degree, dev, scnum, cos2PiXMinusQuarterOverR)
+}
 
+// ApproximateXBOOTParity computes the polynomial used by the SM4 XBOOT parity
+// recovery circuit. It approximates 1-cos(2*pi*x) at the same interpolation
+// nodes used by ApproximateCos.
+func ApproximateXBOOTParity(K, degree int, dev float64, scnum int) []*big.Float {
+	return approximate(K, degree, dev, scnum, oneMinusCos2PiX)
+}
+
+func approximate(K, degree int, dev float64, scnum int, target func(x, r *big.Float) *big.Float) []*big.Float {
 	// Gets the list of degree per interval and the total degree
 	deg, totdeg := genDegrees(degree, K, dev)
 
 	// Generates the nodes for each interval, updates the total degree if needed
-	nodes, y := genNodes(deg, dev, totdeg, K, scnum)
+	nodes, y := genNodes(deg, dev, totdeg, K, scnum, target)
 
 	// Solves the linear system and returns the coefficients
 	return solve(totdeg, K, scnum, nodes, y)[:totdeg]
 }
 
-// y = cos(2 * pi * (x - 0.25)/r)
 func cos2PiXMinusQuarterOverR(x, r *big.Float) (y *big.Float) {
 	//y = 2 * pi
 	y = bignum.NewFloat(2.0, EncodingPrecision)
@@ -54,7 +63,18 @@ func cos2PiXMinusQuarterOverR(x, r *big.Float) (y *big.Float) {
 
 	// y = cos(2 * pi * (x - 0.25)/r)
 	return bignum.Cos(y)
+}
 
+func oneMinusCos2PiX(x, _ *big.Float) (y *big.Float) {
+	// y = 2 * pi * x
+	y = bignum.NewFloat(2.0, EncodingPrecision)
+	y.Mul(y, pi)
+	y.Mul(y, x)
+
+	// y = 1 - cos(2 * pi * x)
+	y = bignum.Cos(y)
+	z := bignum.NewFloat(1.0, EncodingPrecision)
+	return z.Sub(z, y)
 }
 
 func log2(x float64) float64 {
@@ -158,7 +178,7 @@ func genDegrees(degree, K int, dev float64) ([]int, int) {
 	return deg, totdeg
 }
 
-func genNodes(deg []int, dev float64, totdeg, K, scnum int) ([]*big.Float, []*big.Float) {
+func genNodes(deg []int, dev float64, totdeg, K, scnum int, target func(x, r *big.Float) *big.Float) ([]*big.Float, []*big.Float) {
 
 	var scfac = bignum.NewFloat(1<<scnum, EncodingPrecision)
 
@@ -227,8 +247,7 @@ func genNodes(deg []int, dev float64, totdeg, K, scnum int) ([]*big.Float, []*bi
 	// Evaluates the nodes y[i] = f(nodes[i])
 	var y = make([]*big.Float, totdeg)
 	for i := 0; i < totdeg; i++ {
-		// y[i] = cos(2*pi*(nodes[i]-0.25)/r)
-		y[i] = cos2PiXMinusQuarterOverR(nodes[i], scfac)
+		y[i] = target(nodes[i], scfac)
 	}
 
 	return nodes, y

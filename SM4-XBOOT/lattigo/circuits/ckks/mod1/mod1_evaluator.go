@@ -57,7 +57,7 @@ func (eval Evaluator) EvaluateAndScaleNew(ct *rlwe.Ciphertext, scaling complex12
 		targetScale.Value.Sqrt(&targetScale.Value)
 	}
 
-	// Division by 1/2^r and change of variable for the Chebyshev evaluation
+	// Division by 1/2^r and change of variable for the Chebyshev evaluation.
 	if evm.Mod1Type == CosDiscrete || evm.Mod1Type == CosContinuous {
 		offset := new(big.Float).Sub(&evm.Mod1Poly.B, &evm.Mod1Poly.A)
 		offset.Mul(offset, new(big.Float).SetFloat64(evm.IntervalShrinkFactor()))
@@ -158,5 +158,16 @@ func (eval Evaluator) EvaluateAndScaleNew(ct *rlwe.Ciphertext, scaling complex12
 //
 // Scaling back error correction by 2^{round(log(Q))}/Q afterward is included in the polynomial
 func (eval Evaluator) EvaluateNew(ct *rlwe.Ciphertext) (*rlwe.Ciphertext, error) {
+	if eval.Parameters.Mod1Type == CosDiscreteXBOOT {
+		return eval.EvaluateXBOOTNew(ct)
+	}
 	return eval.EvaluateAndScaleNew(ct, 1)
+}
+
+// EvaluateXBOOTNew applies the XBOOT parity-recovery variant of EvalMod.
+func (eval Evaluator) EvaluateXBOOTNew(ct *rlwe.Ciphertext) (*rlwe.Ciphertext, error) {
+	if eval.Parameters.Mod1Type != CosDiscreteXBOOT {
+		return nil, fmt.Errorf("cannot EvaluateXBOOT: Mod1Type must be CosDiscreteXBOOT")
+	}
+	return eval.EvaluateAndScaleNew(ct, complex(0.25, 0))
 }

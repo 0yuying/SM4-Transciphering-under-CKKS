@@ -20,9 +20,10 @@ type Type uint64
 // Sin and Cos are the two proposed functions for [Type].
 // These trigonometric functions offer a good approximation of the function x mod 1 when the values are close to the origin.
 const (
-	CosDiscrete   = Type(0) // Special approximation (Han and Ki) of pow((1/2pi), 1/2^r) * cos(2pi(x-0.25)/2^r); this method requires a minimum degree of 2*(K-1).
-	SinContinuous = Type(1) // Standard Chebyshev approximation of (1/2pi) * sin(2pix) on the full interval
-	CosContinuous = Type(2) // Standard Chebyshev approximation of pow((1/2pi), 1/2^r) * cos(2pi(x-0.25)/2^r) on the full interval
+	CosDiscrete      = Type(0) // Special approximation (Han and Ki) of pow((1/2pi), 1/2^r) * cos(2pi(x-0.25)/2^r); this method requires a minimum degree of 2*(K-1).
+	SinContinuous    = Type(1) // Standard Chebyshev approximation of (1/2pi) * sin(2pix) on the full interval
+	CosContinuous    = Type(2) // Standard Chebyshev approximation of pow((1/2pi), 1/2^r) * cos(2pi(x-0.25)/2^r) on the full interval
+	CosDiscreteXBOOT = Type(3) // XBOOT parity-recovery approximation of 1-cos(2pi*x); this method requires a minimum degree of 2*(K-1).
 )
 
 // ParametersLiteral a struct for the parameters of the mod 1 procedure.
@@ -56,7 +57,7 @@ func (evm *ParametersLiteral) UnmarshalBinary(data []byte) (err error) {
 // Depth returns the depth required to evaluate x mod 1.
 func (evm ParametersLiteral) Depth() (depth int) {
 
-	if evm.Mod1Type == CosDiscrete { // this method requires a minimum degree of 2*K-1.
+	if evm.Mod1Type == CosDiscrete || evm.Mod1Type == CosDiscreteXBOOT { // these methods require a minimum degree of 2*K-1.
 		depth += int(bits.Len64(uint64(utils.Max(evm.Mod1Degree, 2*evm.K-1))))
 	} else {
 		depth += int(bits.Len64(uint64(evm.Mod1Degree)))
@@ -151,6 +152,8 @@ func NewParametersFromLiteral(params ckks.Parameters, evm ParametersLiteral) (Pa
 			}
 		}
 
+	} else if evm.Mod1Type == CosDiscreteXBOOT {
+		sqrt2pi = math.Pow(qDiff*scaling, 1.0/scFac)
 	} else {
 		sqrt2pi = math.Pow(0.15915494309189535*qDiff*scaling, 1.0/scFac)
 	}
@@ -173,6 +176,16 @@ func NewParametersFromLiteral(params ckks.Parameters, evm ParametersLiteral) (Pa
 
 	case CosDiscrete:
 		mod1Poly = bignum.NewPolynomial(bignum.Chebyshev, cosine.ApproximateCos(evm.K, evm.Mod1Degree, float64(uint(1<<evm.LogMessageRatio)), int(evm.DoubleAngle)), [2]float64{-K, K})
+		mod1Poly.IsOdd = false
+
+		for i := range mod1Poly.Coeffs {
+			if i&1 == 1 {
+				mod1Poly.Coeffs[i] = nil
+			}
+		}
+
+	case CosDiscreteXBOOT:
+		mod1Poly = bignum.NewPolynomial(bignum.Chebyshev, cosine.ApproximateXBOOTParity(evm.K, evm.Mod1Degree, float64(uint(1<<evm.LogMessageRatio)), int(evm.DoubleAngle)), [2]float64{-K, K})
 		mod1Poly.IsOdd = false
 
 		for i := range mod1Poly.Coeffs {

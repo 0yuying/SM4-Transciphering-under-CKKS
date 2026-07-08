@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tuneinsight/lattigo/v6/circuits/ckks/bootstrapping"
+	"github.com/tuneinsight/lattigo/v6/circuits/ckks/mod1"
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"
 	"github.com/tuneinsight/lattigo/v6/schemes/ckks"
 )
@@ -27,6 +28,9 @@ func TestDefaultProfile(t *testing.T) {
 	}
 	if got, want := btpParams.CircuitOrder, bootstrapping.DecodeThenModUp; got != want {
 		t.Fatalf("CircuitOrder=%d, want %d", got, want)
+	}
+	if got, want := btpParams.Mod1ParametersLiteral.Mod1Type, mod1.CosDiscreteXBOOT; got != want {
+		t.Fatalf("Mod1Type=%d, want %d", got, want)
 	}
 	if got, want := len(Grid(DefaultLogN)), 72; got != want {
 		t.Fatalf("grid size=%d, want %d", got, want)

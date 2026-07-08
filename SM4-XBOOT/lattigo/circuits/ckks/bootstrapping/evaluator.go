@@ -81,8 +81,9 @@ func NewEvaluator(btpParams Parameters, evk *EvaluationKeys) (eval *Evaluator, e
 		return nil, fmt.Errorf("cannot use double angle formula for Mod1Type = Sin -> must use Mod1Type = Cos")
 	}
 
-	if btpParams.Mod1ParametersLiteral.Mod1Type == mod1.CosDiscrete && btpParams.Mod1ParametersLiteral.Mod1Degree < 2*(btpParams.Mod1ParametersLiteral.K-1) {
-		return nil, fmt.Errorf("Mod1Type 'mod1.CosDiscrete' uses a minimum degree of 2*(K-1) but EvalMod degree is smaller")
+	if (btpParams.Mod1ParametersLiteral.Mod1Type == mod1.CosDiscrete || btpParams.Mod1ParametersLiteral.Mod1Type == mod1.CosDiscreteXBOOT) &&
+		btpParams.Mod1ParametersLiteral.Mod1Degree < 2*(btpParams.Mod1ParametersLiteral.K-1) {
+		return nil, fmt.Errorf("Mod1Type 'mod1.CosDiscrete' and 'mod1.CosDiscreteXBOOT' use a minimum degree of 2*(K-1) but EvalMod degree is smaller")
 	}
 
 	switch btpParams.CircuitOrder {
@@ -252,66 +253,52 @@ func (eval Evaluator) Bootstrap(ct *rlwe.Ciphertext) (*rlwe.Ciphertext, error) {
 	return &cts[0], nil
 }
 
-// Bootstrap bootstraps a single ciphertext and returns the bootstrapped ciphertext.
+// BootstrapReal applies the XBOOT parity-recovery bootstrap to one real ciphertext.
 func (eval Evaluator) BootstrapReal(ct *rlwe.Ciphertext) (*rlwe.Ciphertext, error) {
+	if err := eval.requireXBOOT("BootstrapReal"); err != nil {
+		return nil, err
+	}
+
 	ct0 := ct.CopyNew()
 	// Step 1 : SlotsToCoeffs (Homomorphic decoding)
 	var err error
 	if ct0.Level() < eval.SlotsToCoeffsParameters.LevelQ {
-		panic("Level available < S2C.Level!")
+		return nil, fmt.Errorf("cannot BootstrapReal: level=%d < SlotsToCoeffs.LevelQ=%d", ct0.Level(), eval.SlotsToCoeffsParameters.LevelQ)
 	}
 	for ct0.Level() > eval.SlotsToCoeffsParameters.LevelQ {
 		eval.DropLevel(ct0, 1)
 	}
 
 	if ct0, err = eval.SlotsToCoeffs(ct0, nil); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("cannot BootstrapReal: SlotsToCoeffs: %w", err)
 	}
 	// Step 3: scale to q/|m|
 	if ct0, _, err = eval.ScaleDown(ct0); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("cannot BootstrapReal: ScaleDown: %w", err)
 	}
 	// Step 4 : Extend the basis from q to Q
 	if ct0, err = eval.ModUp(ct0); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("cannot BootstrapReal: ModUp: %w", err)
 	}
 	var real *rlwe.Ciphertext
 	if real, _, err = eval.CoeffsToSlots(ct0); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("cannot BootstrapReal: CoeffsToSlots: %w", err)
 	}
-	// Step 6 : EvalMod (Homomorphic modular reduction)
-	if real, err = eval.EvalMod(real); err != nil {
-		panic(err)
+	// Step 6 : XBOOT parity recovery
+	if real, err = eval.EvalModXBOOT(real); err != nil {
+		return nil, fmt.Errorf("cannot BootstrapReal: EvalModXBOOT: %w", err)
 	}
 	return real, nil
 }
 
-// Bootstrap bootstraps a single ciphertext and returns the bootstrapped ciphertext.
+// BootstrapCmplxThenDivide applies the paired XBOOT parity-recovery bootstrap.
 func (eval Evaluator) BootstrapCmplxThenDivide(ctIn0, ctIn1 *rlwe.Ciphertext) (*rlwe.Ciphertext, *rlwe.Ciphertext, error) {
-	return eval.bootstrapCmplxThenDivideWithEvalModMode(ctIn0, ctIn1, false)
-}
+	if err := eval.requireXBOOT("BootstrapCmplxThenDivide"); err != nil {
+		return nil, nil, err
+	}
 
-// BootstrapCmplxThenDivideLazyMod2 bootstraps two ciphertexts packed as real/imag while deferring mod2 to EvalMod.
-// It applies x -> x/2 before the bootstrap circuit and scales EvalMod outputs by 2 to restore mod2 semantics.
-func (eval Evaluator) BootstrapCmplxThenDivideLazyMod2(ctIn0, ctIn1 *rlwe.Ciphertext) (*rlwe.Ciphertext, *rlwe.Ciphertext, error) {
-	return eval.bootstrapCmplxThenDivideWithEvalModMode(ctIn0, ctIn1, true)
-}
-
-func (eval Evaluator) bootstrapCmplxThenDivideWithEvalModMode(ctIn0, ctIn1 *rlwe.Ciphertext, lazyMod2 bool) (*rlwe.Ciphertext, *rlwe.Ciphertext, error) {
 	ct0 := ctIn0.CopyNew()
 	ct1 := ctIn1.CopyNew()
-
-	lazyMod2Factor := eval.Mod1Parameters.K * eval.Mod1Parameters.QDiff * eval.Mod1Parameters.MessageRatio()
-	if lazyMod2Factor <= 0 {
-		return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: invalid lazy mod2 factor=%f", lazyMod2Factor)
-	}
-
-	// x -> x * (QDiff*MessageRatio/2) by metadata scaling only
-	// (no polynomial stage, no extra level consumption).
-	if lazyMod2 {
-		ct0.Scale = ct0.Scale.Div(rlwe.NewScale(lazyMod2Factor))
-		ct1.Scale = ct1.Scale.Div(rlwe.NewScale(lazyMod2Factor))
-	}
 
 	if err := eval.Evaluator.Mul(ct1, 1i, ct1); err != nil {
 		return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: pack imag component: %w", err)
@@ -343,44 +330,21 @@ func (eval Evaluator) bootstrapCmplxThenDivideWithEvalModMode(ctIn0, ctIn1 *rlwe
 		return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: CoeffsToSlots: %w", err)
 	}
 
-	if lazyMod2 {
-		// EvalMod output is a sinusoidal odd/even signature in this embedding.
-		// Scaling by pi/2 normalizes odd inputs near +/-1, then squaring maps them near 1.
-		lazyMod2OutScale := complex((math.Pi/2.0)/lazyMod2Factor, 0)
-		if real, err = eval.EvalModAndScale(real, lazyMod2OutScale); err != nil {
-			return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: EvalModAndScale(real): %w", err)
-		}
-		if imag, err = eval.EvalModAndScale(imag, lazyMod2OutScale); err != nil {
-			return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: EvalModAndScale(imag): %w", err)
-		}
-		if real, err = eval.squareToBit(real); err != nil {
-			return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: squareToBit(real): %w", err)
-		}
-		if imag, err = eval.squareToBit(imag); err != nil {
-			return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: squareToBit(imag): %w", err)
-		}
-	} else {
-		if real, err = eval.EvalMod(real); err != nil {
-			return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: EvalMod(real): %w", err)
-		}
-		if imag, err = eval.EvalMod(imag); err != nil {
-			return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: EvalMod(imag): %w", err)
-		}
+	if real, err = eval.EvalModXBOOT(real); err != nil {
+		return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: EvalModXBOOT(real): %w", err)
+	}
+	if imag, err = eval.EvalModXBOOT(imag); err != nil {
+		return nil, nil, fmt.Errorf("cannot BootstrapCmplxThenDivide: EvalModXBOOT(imag): %w", err)
 	}
 
 	return real, imag, nil
 }
 
-func (eval Evaluator) squareToBit(ctIn *rlwe.Ciphertext) (*rlwe.Ciphertext, error) {
-	ctOut, err := eval.Evaluator.MulRelinNew(ctIn, ctIn)
-	if err != nil {
-		return nil, err
+func (eval Evaluator) requireXBOOT(caller string) error {
+	if eval.Mod1Parameters.Mod1Type != mod1.CosDiscreteXBOOT {
+		return fmt.Errorf("cannot %s: Mod1Type must be mod1.CosDiscreteXBOOT", caller)
 	}
-	if err = eval.Evaluator.Rescale(ctOut, ctOut); err != nil {
-		return nil, err
-	}
-	ctOut.Scale = eval.BootstrappingParameters.DefaultScale()
-	return ctOut, nil
+	return nil
 }
 
 // BootstrapMany bootstraps a list of ciphertext and returns the list of bootstrapped ciphertexts.
@@ -440,41 +404,6 @@ func (eval Evaluator) BootstrapMany(cts []rlwe.Ciphertext) ([]rlwe.Ciphertext, e
 	}
 
 	return cts, err
-}
-
-// BootstrapManyLazyMod2 bootstraps a list of ciphertexts while deferring mod2 to EvalMod.
-// It copies inputs first so failures cannot pollute the caller's ciphertexts.
-func (eval Evaluator) BootstrapManyLazyMod2(cts []rlwe.Ciphertext) ([]rlwe.Ciphertext, error) {
-	if len(cts) == 0 {
-		return cts, nil
-	}
-
-	out := make([]rlwe.Ciphertext, len(cts))
-	for i := 0; i < len(cts); i += 2 {
-		ct0 := cts[i].CopyNew()
-		var ct1 *rlwe.Ciphertext
-		hasSecond := i+1 < len(cts)
-		if hasSecond {
-			ct1 = cts[i+1].CopyNew()
-		} else {
-			ct1 = ct0.CopyNew()
-			if err := eval.Evaluator.Sub(ct1, ct1, ct1); err != nil {
-				return nil, fmt.Errorf("cannot BootstrapManyLazyMod2: build zero pair: %w", err)
-			}
-		}
-
-		out0, out1, err := eval.BootstrapCmplxThenDivideLazyMod2(ct0, ct1)
-		if err != nil {
-			return nil, fmt.Errorf("cannot BootstrapManyLazyMod2: pair[%d] failed: %w", i/2, err)
-		}
-
-		out[i] = *out0
-		if hasSecond {
-			out[i+1] = *out1
-		}
-	}
-
-	return out, nil
 }
 
 // Depth returns the multiplicative depth (number of levels consumed) of the bootstrapping circuit.
@@ -969,10 +898,9 @@ func (eval Evaluator) EvalMod(ctIn *rlwe.Ciphertext) (ctOut *rlwe.Ciphertext, er
 	return
 }
 
-// EvalModAndScale applies the homomorphic modular reduction by q and scales the output value (without
-// consuming an additional level).
-func (eval Evaluator) EvalModAndScale(ctIn *rlwe.Ciphertext, scaling complex128) (ctOut *rlwe.Ciphertext, err error) {
-	if ctOut, err = eval.Mod1Evaluator.EvaluateAndScaleNew(ctIn, scaling); err != nil {
+// EvalModXBOOT applies the XBOOT parity-recovery EvalMod variant.
+func (eval Evaluator) EvalModXBOOT(ctIn *rlwe.Ciphertext) (ctOut *rlwe.Ciphertext, err error) {
+	if ctOut, err = eval.Mod1Evaluator.EvaluateXBOOTNew(ctIn); err != nil {
 		return nil, err
 	}
 

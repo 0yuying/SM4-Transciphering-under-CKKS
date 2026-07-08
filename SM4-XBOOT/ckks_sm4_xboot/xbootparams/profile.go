@@ -97,7 +97,7 @@ func Grid(logN int) []Profile {
 func (p Profile) Build() (ckks.Parameters, bootstrapping.Parameters, error) {
 	mod1Literal := mod1.ParametersLiteral{
 		LogScale:        p.LogDefaultScale + 1,
-		Mod1Type:        mod1.CosDiscrete,
+		Mod1Type:        mod1.CosDiscreteXBOOT,
 		Mod1Degree:      p.Mod1Degree,
 		K:               p.Mod1K,
 		LogMessageRatio: p.LogMessageRatio,
