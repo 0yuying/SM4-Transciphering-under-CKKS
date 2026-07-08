@@ -1,4 +1,4 @@
-# SM4-CKKS Transciphering with Lazy-mod2 Recovery
+# SM4-CKKS Transciphering with LazyMod2
 
 This is the code artifact for our SM4-CKKS transciphering experiments. The
 main implementation locates in [`./SM4-CKKS/ckks_sm4_lazymod2`](./SM4-CKKS/ckks_sm4_lazymod2).
@@ -72,13 +72,13 @@ The repository contains three isolated comparison implementations.
 
 ```
 # SM4-BLEACH experiment for comparison with BLEACH [2]
-./SM4-BLEACH/ckks_sm4_xboot_1
+./SM4-BLEACH/ckks_sm4_xboot
 
 # SM4-XBOOT experiment for comparison with XBOOT [3]
 ./SM4-XBOOT/ckks_sm4_xboot
 
 # SM4-LazySubByte experiment for comparison with LazySubByte [4]
-./SM4-LazySubByte/ckks_sm4_xboot_7
+./SM4-LazySubByte/ckks_sm4_lazysubbyte
 ```
 
 Each experiment directory has its own `go.mod` and a local `../lattigo`
@@ -115,7 +115,7 @@ cd ./SM4-CKKS/ckks_sm4_lazymod2
 Running the SM4-BLEACH comparison:
 
 ```PowerShell
-cd ./SM4-BLEACH/ckks_sm4_xboot_1
+cd ./SM4-BLEACH/ckks_sm4_xboot
 go run main.go
 ```
 
@@ -129,7 +129,7 @@ go run main.go
 Running the SM4-LazySubByte comparison:
 
 ```PowerShell
-cd ./SM4-LazySubByte/ckks_sm4_xboot_7
+cd ./SM4-LazySubByte/ckks_sm4_lazysubbyte
 go run main.go
 ```
 
@@ -169,7 +169,7 @@ https://eprint.iacr.org/2025/1865.
 ## Disclaimer
 
 This repository is organized for paper artifact evaluation and experimental
-comparison. The `logN=12` parameter set is used for performance experiments and
+comparison. The `logN=16` parameter set is used for performance experiments and
 is not claimed as a 128-bit security parameter set.
 
 ## License
