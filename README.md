@@ -24,31 +24,15 @@ without sharing dependency state with the other comparison variants.
 
 ## Main Contribution
 
-The main artifact is **SM4-CKKS Transciphering: Lazy-mod2**. It is implemented
-in `SM4-CKKS/ckks_sm4_lazymod2` and corresponds to the paper contribution.
+The main artifact is **SM4-CKKS Transciphering: Lazy-mod2**, implemented in
+`SM4-CKKS/ckks_sm4_lazymod2`.
 
-- **LazyMod2 Recovery Mechanism.** We propose LazyMod2, which defers modular
-  reduction to the CKKS bootstrapping stage in XOR evaluation. Instead of
-  performing modular reduction after each homomorphic XOR accumulation,
-  intermediate results are aggregated and the Least Significant Bit (LSB) is
-  extracted only during the EvalMod step via a trigonometric approximation.
-  This design reduces the computational overhead of chained XOR operations and
-  is well suited to the long XOR accumulation paths encountered in SM4
-  transciphering.
-- **Optimized Lazy SubByte Evaluation for SM4.** We extend the Lazy SubByte
-  technique to the SM4 round function by leveraging the structure of the
-  nonlinear substitution `S` and the 32-bit linear diffusion layer. Instead of
-  performing immediate relinearization and rescaling after each multiplication,
-  we accumulate intermediate terms that contribute to the same output into
-  shared buckets. This design reduces the latency of the SubByte component by
-  approximately 30% compared with the LazySubByte baseline.
-- **Packing Structure for SM4.** We design a bit-sliced SIMD packing strategy
-  for SM4-CTR evaluation under CKKS, which enables homomorphic XOR via slot
-  additions. For the nonlinear substitution, each 32-bit state is decomposed
-  into four 8-bit words, allowing independent S-box instances to be evaluated
-  in parallel across ciphertext slots. This packing strategy reduces redundant
-  data reordering in homomorphic SM4 execution and improves the slot
-  organization of SM4-CTR batching.
+- **LazyMod2 recovery:** defers XOR modular reduction to CKKS EvalMod and
+  recovers the LSB during bootstrapping.
+- **SM4 Lazy SubByte:** adapts LazySubByte-style bucketed evaluation to the SM4
+  S-box and diffusion layer.
+- **SM4 packing:** uses bit-sliced SIMD packing for SM4-CTR so XORs become slot
+  additions and parallel S-box evaluation is easier to organize.
 
 ## Experimental Parameters
 
