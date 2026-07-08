@@ -1,4 +1,4 @@
-# SM4-CKKS Transciphering with LazyMod2
+# SM4 Transciphering under CKKS
 
 This is the code artifact for our SM4-CKKS transciphering experiments. The
 main implementation locates in [`./SM4-CKKS/ckks_sm4_lazymod2`](./SM4-CKKS/ckks_sm4_lazymod2).
