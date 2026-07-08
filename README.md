@@ -1,8 +1,7 @@
 # SM4-CKKS Transciphering with Lazy-mod2 Recovery
 
 This is the code artifact for our SM4-CKKS transciphering experiments. The
-main implementation is named ***SM4-CKKS Transciphering: Lazy-mod2*** and is
-located in [`./SM4-CKKS/ckks_sm4_lazymod2`](./SM4-CKKS/ckks_sm4_lazymod2).
+main implementation locates in [`./SM4-CKKS/ckks_sm4_lazymod2`](./SM4-CKKS/ckks_sm4_lazymod2).
 
 Our implementation is based on the open-source FHE library
 [Lattigo v6.0](https://github.com/tuneinsight/lattigo). This repository keeps
@@ -72,13 +71,13 @@ The main contribution includes the following functionalities.
 The repository contains three isolated comparison implementations.
 
 ```
-# SM4-BLEACH experiment for comparison with BLEACH
+# SM4-BLEACH experiment for comparison with BLEACH [2]
 ./SM4-BLEACH/ckks_sm4_xboot_1
 
-# SM4-XBOOT experiment for comparison with XBOOT
+# SM4-XBOOT experiment for comparison with XBOOT [3]
 ./SM4-XBOOT/ckks_sm4_xboot
 
-# SM4-LazySubByte experiment for comparison with LazySubByte
+# SM4-LazySubByte experiment for comparison with LazySubByte [4]
 ./SM4-LazySubByte/ckks_sm4_xboot_7
 ```
 
@@ -86,48 +85,21 @@ Each experiment directory has its own `go.mod` and a local `../lattigo`
 dependency. This separation avoids mixing the dependency changes used by
 different baselines.
 
-## Experimental parameters
-
-The main `SM4-CKKS` experiment uses the default Lazy-mod2 profile with
-`logN=12`.
-
-| Parameter | Value |
-| --- | --- |
-| Scheme setting | CKKS, `LogN=12` |
-| Main profile | `lazymod2-default` |
-| `QCount` | `23` |
-| `LogQP` | `1472.000000` |
-| `LogDefaultScale` | `42` |
-| q0 / EvalMod / CtS scale | `58` |
-| Slot-domain scale | `42` |
-| StC levels | `[1,1,1]` |
-| CtS levels | `[1,1,1,1]` |
-| Circuit reserve levels | `7` |
-| `LogP` | `[59,59,60,60,60]` |
-| Mod1 approximation | `CosDiscrete`, `K=16`, degree `30`, double-angle `3`, `LogMessageRatio=10` |
-| Secret distributions | `Xs.H=192`, ephemeral secret weight `32` |
-
-The `logN=12` profile is an experimental performance configuration for the
-artifact. It is not presented as a 128-bit security parameter set.
-
-More detailed Lazy-mod2 profile information is given in
-[`./SM4-CKKS/ckks_sm4_lazymod2/README.md`](./SM4-CKKS/ckks_sm4_lazymod2/README.md).
-
 ## Compile and Run SM4-CKKS
 
-An example of running the `logN=12` SM4-CKKS Lazy-mod2 implementation is given
+An example of running the `logN=16` SM4-CKKS Lazy-mod2 implementation is given
 below.
 
 ```PowerShell
 cd ./SM4-CKKS/ckks_sm4_lazymod2
-go run main.go
+go run main.go -logN 16
 ```
 
 Recommended benchmark command:
 
 ```PowerShell
 cd ./SM4-CKKS/ckks_sm4_lazymod2
-go run . -threads 32 -boot-workers 16 -sbox-workers 4
+go run . -threads 32 -boot-workers 16 -sbox-workers 4 -logN 16
 ```
 
 The benchmark script runs several worker configurations and writes reports
@@ -177,6 +149,22 @@ result directories.
 ## References
 
 [1] Lattigo v6.0. Online: https://github.com/tuneinsight/lattigo.
+
+[2] Nir Drucker, Guy Moshkowich, Tomer Pelleg, and Hayim Shaul.
+**BLEACH: Cleaning Errors in Discrete Computations over CKKS.**
+IACR Cryptology ePrint Archive, 2022/1298, 2022.
+https://eprint.iacr.org/2022/1298.
+
+[3] Chao Niu, Zhicong Huang, Zhaomin Yang, Yi Chen, Liang Kong, Cheng Hong,
+and Tao Wei.
+**XBOOT: Free-XOR Gates for CKKS with Applications to Transciphering.**
+IACR Transactions on Cryptographic Hardware and Embedded Systems, 2025(4),
+118-144, 2025. https://doi.org/10.46586/TCHES.V2025.I4.118-144.
+
+[4] Youngjin Bae, Jung Hee Cheon, Minsik Kang, and Taeseong Kim.
+**High-Throughput AES Transciphering using CKKS: Less than 1ms.**
+IACR Cryptology ePrint Archive, 2025/1865, 2025.
+https://eprint.iacr.org/2025/1865.
 
 ## Disclaimer
 
