@@ -8,6 +8,14 @@ Our implementation is based on the open-source FHE library
 isolated local copies of the modified Lattigo dependency for each experiment
 group, so that the comparison implementations can be compiled independently.
 
+The main contributions include the following aspects.
+
+- **LazyMod2 Recovery Mechanism:** Integrates LSB extraction into the CKKS bootstrapping EvalMod stage through trigonometric approximation, reducing the overhead of chained XOR evaluation in SM4 transciphering.
+
+- **Optimized Lazy SubByte Evaluation:** Improves the Lazy SubByte technique for SM4 using a bucket accumulation strategy, reducing redundant Relin/Rescale operations and accelerating nonlinear substitution evaluation.
+
+- **SM4 Packing Structure:** Designs a bit-sliced SIMD packing strategy for SM4-CTR under CKKS, enabling efficient slot-wise XOR evaluation and parallel S-box computation with reduced data reordering overhead.
+
 ## Golang installation and configuration
 
 Downloading the Go binary distribution:
@@ -58,13 +66,7 @@ This part is located at
 ./SM4-CKKS/ckks_sm4_store
 ```
 
-The main contributions include the following aspects.
 
-- **LazyMod2 Recovery Mechanism:** Integrates LSB extraction into the CKKS bootstrapping EvalMod stage through trigonometric approximation, reducing the overhead of chained XOR evaluation in SM4 transciphering.
-
-- **Optimized Lazy SubByte Evaluation:** Improves the Lazy SubByte technique for SM4 using a bucket accumulation strategy, reducing redundant Relin/Rescale operations and accelerating nonlinear substitution evaluation.
-
-- **SM4 Packing Structure:** Designs a bit-sliced SIMD packing strategy for SM4-CTR under CKKS, enabling efficient slot-wise XOR evaluation and parallel S-box computation with reduced data reordering overhead.
 
 ### Comparison schemes
 
