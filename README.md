@@ -14,7 +14,7 @@ The main contributions include the following aspects.
 
 - **Optimized Lazy SubByte Evaluation:** Improves the Lazy SubByte technique for SM4 using a bucket accumulation strategy, reducing redundant Relin/Rescale operations and accelerating nonlinear substitution evaluation.
 
-- **Bit-Sliced Representation for SM4 Transciphering.:** Designs a bit-sliced SIMD packing strategy for SM4-CTR under CKKS, enabling efficient slot-wise XOR evaluation and parallel S-box computation with reduced data reordering overhead.
+- **Bit-Sliced Representation for SM4 Transciphering:** Designs a bit-sliced SIMD packing strategy for SM4-CTR under CKKS, enabling efficient slot-wise XOR evaluation and parallel S-box computation with reduced data reordering overhead.
 
 ## Golang installation and configuration
 
